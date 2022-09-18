@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: odoo
+  labels:
+    app: odoo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: odoo
+      tier: postgres
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: odoo
+        tier: postgres
+    spec:
+      containers:
+      - image: postgres:14
+        name: postgres
+        env:
+        - name: PGDATA
+          value: /var/lib/postgresql/data/odoo
+        - name: POSTGRES_USER
+          value: odoo
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-pass
+              key: password
+        - name: POSTGRES_DB
+          value: postgres
+        ports:
+        - containerPort: 5432
+          name: odoo-db-port
+        volumeMounts:
+        - name: postgres-persistent-storage
+          mountPath: /var/lib/postgresql/data
+      volumes:
+      - name: postgres-persistent-storage
+        persistentVolumeClaim:
+          claimName: postgres-pv-claim
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: odoo
+  namespace: odoo
+  labels:
+    app: odoo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: odoo
+      tier: frontend
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: odoo
+        tier: frontend
+    spec:
+      containers:
+      - image: odoo:15
+        name: odoo
+        securityContext:
+          runAsUser: 0
+          privileged: true
+        env:
+        - name: USER
+          value: odoo
+        - name: HOST
+          value: postgres
+        - name: PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-pass
+              key: password
+        - name: PORT
+          value: "5432"
+        ports:
+        - containerPort: 8069
+          name: odoo-port
+        volumeMounts:
+        - name: odoo-persistent-storage
+          mountPath: /var/lib/odoo
+      volumes:
+      - name: odoo-persistent-storage
+        persistentVolumeClaim:
+          claimName: odoo-pv-claim

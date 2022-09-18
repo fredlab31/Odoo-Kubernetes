@@ -1,0 +1,11 @@
+secretGenerator:
+- name: postgres-pass
+  namespace: odoo
+  literals:
+  - password=fredpassword
+  # On peut aussi faire avec un fichier encodé en base64, qu'on supprimera ensuite
+resources:
+  - namespace.yaml
+  - services.yaml
+  - pv-claims.yaml
+  - deployments.yaml
